@@ -15,9 +15,6 @@ from fastapi.responses import FileResponse
 
 app = FastAPI()
 
-# Define a temporary directory to store uploaded PDF files
-temp_dir = NamedTemporaryFile(delete=False).name
-os.makedirs(temp_dir, exist_ok=True)
 
 # Diese Funktion sollte den Text aus einem PDF extrahieren
 def textfrompdf(pdf_path):
@@ -109,45 +106,34 @@ def extract_flashcard(api_response):
 
 
 
-def export_to_csv(flashcards: List[Dict[str, str]], output_folder: str) -> None:
+def export_to_csv(flashcards: List[Dict[str, str]]) -> None:
     """Export flashcards to a CSV file."""
     csv_filename = "cards.csv"
-    csv_path = os.path.join(output_folder, csv_filename)
-
-    with open(csv_path, mode='w', newline='', encoding='utf-8') as csv_file:
+    with open(csv_filename, mode='w', newline='', encoding='utf-8') as csv_file:
         fieldnames = ["front", "back"]
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         for flashcard in flashcards:
             writer.writerow(flashcard)
 
-def process_folder(input_folder: str, output_folder: str,api_key:str) -> None:
+def process_pdf(pdf_path:str,api_key:str) -> None:
     # Ensure the output folder exists
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
 
-    # List all PDF files in the input folder
-    pdf_files = [f for f in os.listdir(input_folder) if f.endswith(".pdf")]
-
-    for pdf_file in pdf_files:
-        pdf_path = os.path.join(input_folder, pdf_file)
-        
-        pages = textfrompdf(pdf_path)
+    pages = textfrompdf(pdf_path)
         # Extract flashcards from the PDF
-        flashcards = gpt_flashcards(pages,api_key)
+    flashcards = gpt_flashcards(pages,api_key)
 
         # Export flashcards to a CSV file
-        export_to_csv(flashcards, output_folder)
+    export_to_csv(flashcards)
 
-@app.post("/PDF2Flashcard/")
+@app.post("/PDF2Flashcard")
 async def process_pdf_endpoint(api_key: str = Form(...), pdf_file: UploadFile = File(...)):
 
     try:
         # Save the uploaded PDF file to a temporary directory
-        pdf_path = os.path.join(temp_dir, pdf_file.filename)
+        pdf_path =  pdf_file.filename
         with open(pdf_path, "wb") as pdf:
             shutil.copyfileobj(pdf_file.file, pdf)
-        return"sucsess"
 
         # Process the PDF file in a separate thread
         with ThreadPoolExecutor() as executor:
@@ -158,6 +144,9 @@ async def process_pdf_endpoint(api_key: str = Form(...), pdf_file: UploadFile = 
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/test")
+async def nothing(api_key: str = Form(...), pdf_file: UploadFile = File(...)):
+    return FileResponse("cards.csv", headers={"Content-Disposition": f"attachment; filename=cards.csv"})
 
 if __name__ == "__main__":
     import uvicorn
