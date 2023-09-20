@@ -1,0 +1,45 @@
+name: Trigger auto deployment for pdf2anki
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '//**'
+    - '.github/workflows/pdf2anki-AutoDeployTrigger-a4789f04-84db-47d4-9e19-b28bcb28fd32.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.PDF2ANKI_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.PDF2ANKI_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.PDF2ANKI_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }} 
+          registryUrl: kinosystemcontainerreg.azurecr.io
+          registryUsername: ${{ secrets.PDF2ANKI_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.PDF2ANKI_REGISTRY_PASSWORD }}
+          containerAppName: pdf2anki
+          resourceGroup: Anki
+          imageToBuild: kinosystemcontainerreg.azurecr.io/pdf2anki:${{ github.sha }}
+          dockerfilePath: Dockerfile
+
+
