@@ -26,7 +26,7 @@ def textfrompdf(pdf_path):
     return text
 
 
-def gpt_flashcards(pages, api_key):
+async def gpt_flashcards(pages, api_key):
     # Create a ThreadPoolExecutor to parallelize API requests
     with concurrent.futures.ThreadPoolExecutor() as executor:
         # Submit API requests for each segment and store the Future objects
@@ -37,7 +37,7 @@ def gpt_flashcards(pages, api_key):
 
         # Iterate through completed Future objects and extract flashcards
         for future in concurrent.futures.as_completed(futures):
-            response = future.result()
+            response = await future
             flashcard = extract_flashcard(response)
             flashcard_list.append(flashcard)
 
@@ -59,13 +59,15 @@ Lass diese Folien bitte aus und gibt -keine inhalte- zurück
 die Frage sollte die Zentralen inhalte des textes bestmöglich abdecken.
 die Rückseite sollte die Frage beantworten und zusätzliche Informationen enthalten, die Sie sich merken möchten.
 solltest du denken, dass der text keine fachlichen bezug hat wie zb vorstellungsrunden oder nur ein name  bitte einfach überspringen und -keine inhalte- zurückgeben
+du kannst auch mehrere fragen PRO KARTE erstellen, wenn du denkst dass der text mehrere fragen abdeckt. aber bitte nicht mehr als 3 fragen pro karte
+versuch so gut es geht worte aus dem Text zu übernehmen und nicht zu paraphrasieren lass das so wie es ist.
 hier ist der text:'''
 
   # Replace with your OpenAI API key
     openai.api_key = api_key
 
     response = openai.Completion.create(
-        engine="text-davinci-003",
+        engine="babbage-002",
         temperature = 0,
         max_tokens=1000,
         prompt = prompt+ text
